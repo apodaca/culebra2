@@ -114,35 +114,46 @@ x_axis_range = ["1999-10-01", "2000-05-31"]
 # Plot 1: SWE (Index)
 fig_swe = go.Figure()
 fig_swe.add_trace(go.Scatter(x=daily_stats['DummyDate'], y=daily_stats['SWE_Median'], name='Historic Median', line=dict(color='gray', dash='dash')))
-fig_swe.add_trace(go.Scatter(x=current_df['DummyDate'], y=current_df['SWE'], name=f'Current WY ({current_wy})', line=dict(color='blue', width=3)))
+fig_swe.add_trace(go.Scatter(x=current_df['DummyDate'], y=current_df['SWE'], name=f'Current WY ({current_wy})', line=dict(color='#1f77b4', width=3)))
 fig_swe.update_layout(title="Snow Water Equivalent (SWE) - Current vs Historic Median", xaxis_title="Date", yaxis_title="SWE (inches)", template='plotly_white', xaxis=dict(tickformat="%b %d", range=x_axis_range))
 swe_div = fig_swe.to_html(full_html=False, include_plotlyjs='cdn')
 
 # Plot 2: Precipitation Accumulation (Index)
 fig_precip = go.Figure()
 fig_precip.add_trace(go.Scatter(x=daily_stats['DummyDate'], y=daily_stats['Precip_Median'], name='Historic Median', line=dict(color='gray', dash='dash')))
-fig_precip.add_trace(go.Scatter(x=current_df['DummyDate'], y=current_df['Precip_Accum'], name=f'Current WY ({current_wy})', line=dict(color='green', width=3)))
+fig_precip.add_trace(go.Scatter(x=current_df['DummyDate'], y=current_df['Precip_Accum'], name=f'Current WY ({current_wy})', line=dict(color='#2ca02c', width=3)))
 fig_precip.update_layout(title="Precipitation Accumulation - Current vs Historic", xaxis_title="Date", yaxis_title="Precipitation (inches)", template='plotly_white', xaxis=dict(tickformat="%b %d", range=x_axis_range))
 precip_div = fig_precip.to_html(full_html=False, include_plotlyjs=False)
 
 # Plot 3: Temperature (Index)
 last_30 = df.iloc[-30:]
 fig_temp = go.Figure()
-fig_temp.add_trace(go.Scatter(x=last_30.index, y=last_30['T_Max'], name="Max Temp", line=dict(color='red')))
-fig_temp.add_trace(go.Scatter(x=last_30.index, y=last_30['T_Min'], name="Min Temp", line=dict(color='blue')))
-fig_temp.add_trace(go.Scatter(x=last_30.index, y=last_30['T_Avg'], name="Avg Temp", line=dict(color='orange', dash='dot')))
+fig_temp.add_trace(go.Scatter(x=last_30.index, y=last_30['T_Max'], name="Max Temp", line=dict(color='#d62728')))
+fig_temp.add_trace(go.Scatter(x=last_30.index, y=last_30['T_Min'], name="Min Temp", line=dict(color='#1f77b4')))
+fig_temp.add_trace(go.Scatter(x=last_30.index, y=last_30['T_Avg'], name="Avg Temp", line=dict(color='#ff7f0e', dash='dot')))
 fig_temp.update_layout(title="Temperatures (Last 30 Days)", xaxis_title="Date", yaxis_title="Temperature (°F)", template='plotly_white')
 temp_div = fig_temp.to_html(full_html=False, include_plotlyjs=False)
 
-# Plot 4: Worst Years Analysis
+# Plot 4: Worst Years Analysis (Enhanced Q&A Chart)
 fig_worst = go.Figure()
+
+# Historic Median
+fig_worst.add_trace(go.Scatter(x=daily_stats['DummyDate'], y=daily_stats['SWE_Median'], name='Historic Median', line=dict(color='#7f7f7f', width=2, dash='dot')))
+
 for wy in worst_years_filtered:
     wy_data = df[df['WaterYear'] == wy]
     fig_worst.add_trace(go.Scatter(x=wy_data['DummyDate'], y=wy_data['SWE'], name=f'WY {wy}', mode='lines', line=dict(width=1), opacity=0.4))
 
-fig_worst.add_trace(go.Scatter(x=worst_daily_stats['DummyDate'], y=worst_daily_stats['SWE_Worst_Mean'], name='Bottom 10% Mean', line=dict(color='red', width=3, dash='dash')))
-fig_worst.add_trace(go.Scatter(x=current_df['DummyDate'], y=current_df['SWE'], name=f'Current WY ({current_wy})', line=dict(color='blue', width=4)))
-fig_worst.update_layout(title="SWE: Current WY vs. Bottom 10% Worst Years", xaxis_title="Date", yaxis_title="SWE (inches)", template='plotly_white', xaxis=dict(tickformat="%b %d", range=x_axis_range))
+fig_worst.add_trace(go.Scatter(x=worst_daily_stats['DummyDate'], y=worst_daily_stats['SWE_Worst_Mean'], name='Bottom 10% Mean', line=dict(color='#d62728', width=3, dash='dash')))
+fig_worst.add_trace(go.Scatter(x=current_df['DummyDate'], y=current_df['SWE'], name=f'Current WY ({current_wy})', line=dict(color='#1f77b4', width=4)))
+fig_worst.update_layout(
+    title=f"SWE: Peak & Dropoff Comparison (WY {current_wy} vs Median & Challenging Years)", 
+    xaxis_title="Date", 
+    yaxis_title="SWE (inches)", 
+    template='plotly_white', 
+    xaxis=dict(tickformat="%b %d", range=x_axis_range),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+)
 worst_swe_div = fig_worst.to_html(full_html=False, include_plotlyjs='cdn')
 
 
@@ -176,7 +187,9 @@ html_worst = template_worst.render(
     percentile=percentile,
     worst_years_str=worst_years_str,
     target_date_str=target_date_str,
-    table_data=table_data
+    table_data=table_data,
+    current_swe=current_df['SWE'].iloc[-1] if not current_df.empty else 'N/A',
+    current_precip=current_df['Precip_Accum'].iloc[-1] if not current_df.empty else 'N/A'
 )
 with open('output/worst_years.html', 'w', encoding='utf-8') as f:
     f.write(html_worst)

@@ -6,20 +6,23 @@
     <title>{{ station_name }} - Worst Years</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; }
-        .card { border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 12px; margin-bottom: 24px; }
-        .header { background: linear-gradient(135deg, #8b0000 0%, #dc143c 100%); color: white; padding: 40px 0; margin-bottom: 30px; }
-        .percentile-badge { background-color: #000; color: white; padding: 10px 20px; border-radius: 30px; font-weight: bold; display: inline-block; margin-top: 15px; font-size: 1.2rem; }
+        body { background-color: #f4f6f8; font-family: 'Inter', sans-serif; }
+        .card { border: none; box-shadow: 0 8px 12px rgba(0,0,0,0.05); border-radius: 12px; margin-bottom: 24px; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-3px); }
+        .header { background: linear-gradient(135deg, #8b0000 0%, #dc143c 100%); color: white; padding: 50px 0; margin-bottom: 40px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .percentile-badge { background-color: #000; color: white; padding: 12px 25px; border-radius: 30px; font-weight: bold; display: inline-block; margin-top: 15px; font-size: 1.25rem; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        h3.q-title { font-weight: 700; letter-spacing: -0.5px; }
+        .ans-text { line-height: 1.6; color: #4a5568 !important; }
     </style>
 </head>
 <body>
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="index.html">SNOTEL Analytics</a>
+            <a class="navbar-brand fw-bold" href="index.html">SNOTEL Analytics</a>
             <div class="navbar-nav ms-auto">
                 <a class="nav-link" href="index.html">Overview</a>
-                <a class="nav-link active" href="worst_years.html">Worst Years Analysis</a>
+                <a class="nav-link active fw-bold" href="worst_years.html">Worst Years Analysis</a>
             </div>
         </div>
     </nav>
@@ -27,64 +30,65 @@
     <div class="header text-center">
         <div class="container">
             <h1 class="display-4 fw-bold">Bottom 10% Analysis</h1>
-            <p class="lead">Comparing Water Year {{ current_wy }} against the worst seasons on record</p>
-            <p><small>Last updated: {{ update_time }}</small></p>
-            <div class="percentile-badge">Current Year Peak SWE Rank: {{ percentile }} percentile</div>
+            <p class="lead fw-normal">Comparing Water Year {{ current_wy }} against the worst seasons on record</p>
+            <p><small class="opacity-75">Last updated: {{ update_time }}</small></p>
+            <div class="percentile-badge">Current Year Rank: {{ percentile }} percentile</div>
         </div>
     </div>
 
-    <div class="container">
+    <div class="container pb-5">
         <!-- Glossary -->
-        <div class="alert alert-info mb-4 text-start" role="alert">
-            <h5 class="alert-heading">Terms to Know</h5>
-            <ul class="mb-0">
+        <div class="alert alert-info mb-5 text-start shadow-sm border-0 bg-white" style="border-left: 5px solid #0dcaf0 !important;" role="alert">
+            <h5 class="alert-heading fw-bold text-info-emphasis">Terms to Know</h5>
+            <ul class="mb-0 text-secondary">
                 <li><strong>SWE (Snow Water Equivalent):</strong> The amount of liquid water contained within the snowpack. It represents the depth of water that would theoretically result if the entire snowpack melted instantaneously.</li>
                 <li><strong>WY (Water Year):</strong> A 12-month period from October 1st to September 30th. Hydrologists use this timeframe because precipitation that falls in late autumn and winter contributes to the streamflow of the following spring and summer.</li>
             </ul>
         </div>
+        
+        <!-- Q1 Block -->
+        <div class="card p-5 mb-5 border-0 bg-white">
+            <h3 class="mb-4 text-dark q-title" style="border-left: 5px solid #dc3545; padding-left: 20px;">Q: How does this year, {{ current_wy }}, compare to previous challenging years in terms of snowfall and accumulated precipitation?</h3>
+            <p class="fs-5 text-muted ans-text mb-4">
+                <strong>A:</strong> As of {{ target_date_str }}, the current water year ({{ current_wy }}) has accumulated <strong>{{ current_swe }}"</strong> of Snow Water Equivalent and <strong>{{ current_precip }}"</strong> of precipitation. Based strictly on the Peak SWE, we have identified the worst 10% of historic years ({{ worst_years_str }}). The table below details exactly how {{ current_wy }} stacks up against those challenging years on this specific calendar day.
+            </p>
+            <div class="table-responsive mt-3 rounded shadow-sm border">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="py-3 px-4">Water Year</th>
+                            <th class="py-3 px-4">Snow Water Eq. (inches)</th>
+                            <th class="py-3 px-4">Precipitation (inches)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white">
+                        {% for row in table_data %}
+                        <tr class="{% if row.Year == current_wy %}table-primary fw-bold{% endif %}">
+                            <td class="py-3 px-4">{{ row.Year }} {% if row.Year == current_wy %}(Current){% endif %}</td>
+                            <td class="py-3 px-4">{{ row.SWE }}</td>
+                            <td class="py-3 px-4">{{ row.Precip }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <small class="text-muted text-end d-block mt-3">*Note: The Bottom 10% analysis restricts candidates based on Peak Snow Water Equivalent (SWE) recorded during the year.</small>
+        </div>
 
-        <div class="alert alert-warning" role="alert">
-            <strong>Bottom 10% Years Identified (Lowest Peak SWE):</strong> {{ worst_years_str }}
-            <hr>
-            <small>Note: The "Bottom 10%" worst year analysis is calculated strictly based on the Peak Snow Water Equivalent (SWE) of the historic years.</small>
-        </div>
-        
-        <div class="row">
-            <div class="col-12">
-                <div class="card p-3">
-                    {{ worst_swe_div | safe }}
-                </div>
+        <!-- Q2 Block -->
+        <div class="card p-5 border-0 bg-white">
+            <h3 class="mb-4 text-dark q-title" style="border-left: 5px solid #0d6efd; padding-left: 20px;">Q: How does this year's peak and dropoff compare to other challenging years and to the median of all years?</h3>
+            <p class="fs-5 text-muted ans-text mb-4">
+                <strong>A:</strong> The interactive chart below visualizes the daily SWE trajectory through the accumulation and melt seasons. 
+                <br><br>
+                The thick <span style="color: #1f77b4; font-weight: bold;">blue line</span> represents the current year, providing a direct visual comparison against the historic median (<span style="color: #7f7f7f; font-weight: bold;">dotted gray line</span>) and the average path of the bottom 10% worst years (<span style="color: #d62728; font-weight: bold;">dashed red line</span>). The fainter traces show the individual paths of those challenging years over time.
+            </p>
+            <div class="mt-4 border rounded p-2 bg-light">
+                {{ worst_swe_div | safe }}
             </div>
         </div>
         
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card p-4">
-                    <h4 class="mb-3 text-center">Historical Context on {{ target_date_str }}</h4>
-                    <p class="text-center text-muted">Comparing today's metrics with those exactly on this day during the worst water years on record.</p>
-                    <table class="table table-striped table-hover mt-3">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Water Year</th>
-                                <th>Snow Water Eq. (inches)</th>
-                                <th>Precipitation (inches)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in table_data %}
-                            <tr class="{% if row.Year == current_wy %}table-primary fw-bold{% endif %}">
-                                <td>{{ row.Year }} {% if row.Year == current_wy %}(Current){% endif %}</td>
-                                <td>{{ row.SWE }}</td>
-                                <td>{{ row.Precip }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        
-        <footer class="text-center text-muted my-5">
+        <footer class="text-center text-muted mt-5 pt-4 border-top">
             <p>Data Source: USDA NRCS National Water and Climate Center</p>
         </footer>
     </div>
