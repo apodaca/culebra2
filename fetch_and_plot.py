@@ -49,11 +49,12 @@ hist_df = df[df['WaterYear'] < current_wy]
 # 4. Advanced Analytics: Bottom 10% (Worst Years) and Percentile Rank
 yearly_max_swe = df.groupby('WaterYear')['SWE'].max().dropna()
 current_max_swe = current_df['SWE'].max()
+last_current_date = current_df.index[-1]
+target_date_str = last_current_date.strftime("%B %d")
 
 if pd.isna(current_max_swe):
     percentile = "N/A"
 else:
-    # Calculate percentage of historic years with <= max SWE
     less = (yearly_max_swe < current_max_swe).sum()
     equal = (yearly_max_swe == current_max_swe).sum()
     percentile_val = (less + 0.5 * equal) / len(yearly_max_swe) * 100
@@ -61,12 +62,33 @@ else:
     ordinal = lambda n: "%d%s" % (n,"tsnrhtdd"[(n//10%10!=1)*(n%10<4)*n%10::4])
     percentile = ordinal(percentile_int)
 
-# Identify bottom 10% of years (worst years)
 p10_threshold = yearly_max_swe.quantile(0.10)
 worst_years = yearly_max_swe[yearly_max_swe <= p10_threshold].index.tolist()
-# Filter out current year from worst historical data rendering
 worst_years_filtered = [y for y in worst_years if y != current_wy]
 worst_years_df = df[df['WaterYear'].isin(worst_years_filtered)]
+
+# Tabular Data for Worst Years comparison
+table_data = []
+# Current year row
+table_data.append({
+    'Year': current_wy,
+    'SWE': current_df['SWE'].iloc[-1] if not current_df.empty else "N/A",
+    'Precip': current_df['Precip_Accum'].iloc[-1] if not current_df.empty else "N/A"
+})
+
+for wy in sorted(worst_years_filtered):
+    wy_df = df[df['WaterYear'] == wy]
+    match = wy_df[(wy_df.index.month == last_current_date.month) & (wy_df.index.day == last_current_date.day)]
+    if not match.empty:
+        swe_val = match['SWE'].iloc[-1]
+        precip_val = match['Precip_Accum'].iloc[-1]
+        table_data.append({
+            'Year': wy,
+            'SWE': f"{swe_val:.1f}" if pd.notna(swe_val) else "N/A",
+            'Precip': f"{precip_val:.1f}" if pd.notna(precip_val) else "N/A"
+        })
+    else:
+        table_data.append({'Year': wy, 'SWE': "N/A", 'Precip': "N/A"})
 
 # Compute Historical Median and Mean
 daily_stats = hist_df.groupby('DummyDate').agg({
@@ -86,18 +108,21 @@ worst_daily_stats.columns = ['DummyDate', 'SWE_Worst_Mean', 'Precip_Worst_Mean']
 # 5. Generate Plots
 os.makedirs('output', exist_ok=True)
 
+# Common X-Axis constraints (Oct 1 to May 31)
+x_axis_range = ["1999-10-01", "2000-05-31"]
+
 # Plot 1: SWE (Index)
 fig_swe = go.Figure()
 fig_swe.add_trace(go.Scatter(x=daily_stats['DummyDate'], y=daily_stats['SWE_Median'], name='Historic Median', line=dict(color='gray', dash='dash')))
 fig_swe.add_trace(go.Scatter(x=current_df['DummyDate'], y=current_df['SWE'], name=f'Current WY ({current_wy})', line=dict(color='blue', width=3)))
-fig_swe.update_layout(title="Snow Water Equivalent (SWE) - Current vs Historic Median", xaxis_title="Date", yaxis_title="SWE (inches)", template='plotly_white', xaxis=dict(tickformat="%b %d"))
+fig_swe.update_layout(title="Snow Water Equivalent (SWE) - Current vs Historic Median", xaxis_title="Date", yaxis_title="SWE (inches)", template='plotly_white', xaxis=dict(tickformat="%b %d", range=x_axis_range))
 swe_div = fig_swe.to_html(full_html=False, include_plotlyjs='cdn')
 
 # Plot 2: Precipitation Accumulation (Index)
 fig_precip = go.Figure()
 fig_precip.add_trace(go.Scatter(x=daily_stats['DummyDate'], y=daily_stats['Precip_Median'], name='Historic Median', line=dict(color='gray', dash='dash')))
 fig_precip.add_trace(go.Scatter(x=current_df['DummyDate'], y=current_df['Precip_Accum'], name=f'Current WY ({current_wy})', line=dict(color='green', width=3)))
-fig_precip.update_layout(title="Precipitation Accumulation - Current vs Historic", xaxis_title="Date", yaxis_title="Precipitation (inches)", template='plotly_white', xaxis=dict(tickformat="%b %d"))
+fig_precip.update_layout(title="Precipitation Accumulation - Current vs Historic", xaxis_title="Date", yaxis_title="Precipitation (inches)", template='plotly_white', xaxis=dict(tickformat="%b %d", range=x_axis_range))
 precip_div = fig_precip.to_html(full_html=False, include_plotlyjs=False)
 
 # Plot 3: Temperature (Index)
@@ -117,7 +142,7 @@ for wy in worst_years_filtered:
 
 fig_worst.add_trace(go.Scatter(x=worst_daily_stats['DummyDate'], y=worst_daily_stats['SWE_Worst_Mean'], name='Bottom 10% Mean', line=dict(color='red', width=3, dash='dash')))
 fig_worst.add_trace(go.Scatter(x=current_df['DummyDate'], y=current_df['SWE'], name=f'Current WY ({current_wy})', line=dict(color='blue', width=4)))
-fig_worst.update_layout(title="SWE: Current WY vs. Bottom 10% Worst Years", xaxis_title="Date", yaxis_title="SWE (inches)", template='plotly_white', xaxis=dict(tickformat="%b %d"))
+fig_worst.update_layout(title="SWE: Current WY vs. Bottom 10% Worst Years", xaxis_title="Date", yaxis_title="SWE (inches)", template='plotly_white', xaxis=dict(tickformat="%b %d", range=x_axis_range))
 worst_swe_div = fig_worst.to_html(full_html=False, include_plotlyjs='cdn')
 
 
@@ -149,7 +174,9 @@ html_worst = template_worst.render(
     update_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     worst_swe_div=worst_swe_div,
     percentile=percentile,
-    worst_years_str=worst_years_str
+    worst_years_str=worst_years_str,
+    target_date_str=target_date_str,
+    table_data=table_data
 )
 with open('output/worst_years.html', 'w', encoding='utf-8') as f:
     f.write(html_worst)
