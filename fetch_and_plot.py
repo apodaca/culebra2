@@ -69,11 +69,24 @@ worst_years_df = df[df['WaterYear'].isin(worst_years_filtered)]
 
 current_swe_val = current_df['SWE'].iloc[-1] if not current_df.empty else None
 current_precip_val = current_df['Precip_Accum'].iloc[-1] if not current_df.empty else None
+current_tmax_val = current_df['T_Max'].iloc[-1] if not current_df.empty else None
 
 # Current Day Historical Stats (for Box Plots and Tables)
 today_hist_df = hist_df[(hist_df.index.month == last_current_date.month) & (hist_df.index.day == last_current_date.day)]
 swe_stats = today_hist_df['SWE'].describe()
 precip_stats = today_hist_df['Precip_Accum'].describe()
+
+# T_Max Percentile Calculation
+if pd.notna(current_tmax_val) and not today_hist_df['T_Max'].dropna().empty:
+    tmax_series = today_hist_df['T_Max'].dropna()
+    less = (tmax_series < current_tmax_val).sum()
+    equal = (tmax_series == current_tmax_val).sum()
+    t_percentile_val = (less + 0.5 * equal) / len(tmax_series) * 100
+    tmax_percentile_int = int(round(t_percentile_val))
+    ordinal_func = lambda n: "%d%s" % (n,"tsnrhtdd"[(n//10%10!=1)*(n%10<4)*n%10::4])
+    tmax_percentile = ordinal_func(tmax_percentile_int)
+else:
+    tmax_percentile = "N/A"
 
 # Tabular Data for Worst Years comparison
 table_data = []
@@ -185,7 +198,7 @@ fig_worst.add_trace(go.Scatter(x=current_df['DummyDate'], y=current_df['SWE'], n
 fig_worst.update_layout(
     title=f"SWE: Peak & Dropoff Comparison (WY {current_wy} vs Median & Challenging Years)", xaxis_title="Date", yaxis_title="SWE (inches)", template='plotly_white', xaxis=dict(tickformat="%b %d", range=x_axis_range), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
 )
-worst_swe_div = fig_worst.to_html(full_html=False, include_plotlyjs=False)
+worst_swe_div = fig_worst.to_html(full_html=False, include_plotlyjs='cdn')
 
 
 # 6. HTML Template Generation
@@ -204,9 +217,11 @@ html_index = template_index.render(
     precip_box_div=precip_box_div,
     current_swe=f"{current_swe_val:.1f}" if pd.notna(current_swe_val) else 'N/A',
     current_precip=f"{current_precip_val:.1f}" if pd.notna(current_precip_val) else 'N/A',
+    current_tmax=f"{current_tmax_val:.0f}" if pd.notna(current_tmax_val) else 'N/A',
     swe_stats=swe_stats,
     precip_stats=precip_stats,
-    percentile=percentile
+    percentile=percentile,
+    tmax_percentile=tmax_percentile
 )
 with open('output/index.html', 'w', encoding='utf-8') as f:
     f.write(html_index)

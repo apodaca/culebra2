@@ -90,7 +90,14 @@
         </div>
 
         <!-- Charts -->
+        <!-- Rotation Tip for Mobile -->
         <div class="row mb-5">
+            <div class="col-12 d-md-none">
+                <div class="alert alert-warning alert-dismissible fade show text-center shadow-sm" role="alert">
+                    <strong>📱 Tip:</strong> For the best viewing experience on mobile, rotate your device sideways.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
             <div class="col-12">
                 <div class="card p-3 shadow-sm mb-4 bg-white">
                     {{ swe_div | safe }}
@@ -100,6 +107,18 @@
                 </div>
                 <div class="card p-3 shadow-sm bg-white">
                     {{ temp_div | safe }}
+                </div>
+                <!-- High Temperature Context Card -->
+                <div class="card p-3 shadow-sm bg-white mt-4 border-start border-danger border-4">
+                    <div class="d-flex align-items-center">
+                        <div class="display-4 me-4">🌡️</div>
+                        <div>
+                            <h3 class="h5 mb-1 text-muted">Today's High Temperature Context</h3>
+                            <p class="mb-0 fs-5">
+                                The recorded high of <strong class="text-danger">{{ current_tmax }}°F</strong> is in the <strong>{{ tmax_percentile }} percentile</strong> of historically recorded highs on {{ target_date_str }}.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
