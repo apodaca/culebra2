@@ -1,0 +1,6 @@
+.venv/
+.venv312/
+output/
+__pycache__/
+*.pyc
+sample.csv
